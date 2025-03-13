@@ -363,8 +363,7 @@ class PacmanRules:
 
         # Update Configuration
         vector = Actions.directionToVector(action, PacmanRules.PACMAN_SPEED)
-        pacmanState.configuration = pacmanState.configuration.generateSuccessor(
-            vector)
+        pacmanState.configuration = pacmanState.configuration.generateSuccessor(vector)
 
         # Eat
         next = pacmanState.configuration.getPosition()
@@ -584,7 +583,12 @@ def readCommand(argv):
             options.agentArgs += layout_str
         else:
             options.agentArgs = layout_str
+
     agentOpts = parseAgentArgs(options.agentArgs)
+
+    if options.pacman == "PlanningAgent":
+        agentOpts['layout'] = args['layout']
+
     if options.numTraining > 0:
         args['numTraining'] = options.numTraining
         if 'numTraining' not in agentOpts:
