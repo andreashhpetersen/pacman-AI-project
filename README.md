@@ -6,7 +6,7 @@ To run the game use:
 or
 `python pacman.py -p PlanningAgent -l bigGrid`
 
-The code of the planning agent is in the file planningAgent.py. Please, rename the agent to give it the name you want (simply by changing the name of the class).
+The code of the planning agent is in the file planningAgents.py. Please, rename the agent to give it the name you want (simply by changing the name of the class).
 
 Your task is to implement the offline_planning function (where you precompute some V or Q function in some way, e.g. using RL, or using ideas based on Pattern Databases) and/or policy function; and the getAction function where you lookup your policy and/or perform online search (e.g., MCTS, LRTDP). 
 

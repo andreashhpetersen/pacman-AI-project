@@ -586,8 +586,7 @@ def readCommand(argv):
 
     agentOpts = parseAgentArgs(options.agentArgs)
 
-    if options.pacman == "PlanningAgent":
-        agentOpts['layout'] = args['layout']
+    agentOpts['layout'] = args['layout']
 
     if options.numTraining > 0:
         args['numTraining'] = options.numTraining
