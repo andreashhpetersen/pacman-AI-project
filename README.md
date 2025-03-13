@@ -1,10 +1,12 @@
 Scrips for the assignment of creating a planning/rl agent for Pacman. Taken from an assignment at (https://ai.berkeley.edu/project_overview.html)
 
-To run the game use: 
+To run the game with some of the layouts that we will use for evaluation use: 
 
-`python pacman.py -p PlanningAgent -l mediumGrid `
+`python pacman.py -p PlanningAgent -l knownSmall `
 or
-`python pacman.py -p PlanningAgent -l bigGrid`
+`python pacman.py -p PlanningAgent -l knownMedium `
+or
+`python pacman.py -p PlanningAgent -l knownLarge`
 
 The code of the planning agent is in the file planningAgents.py. Please, rename the agent to give it the name you want (simply by changing the name of the class).
 

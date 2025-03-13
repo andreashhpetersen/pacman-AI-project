@@ -41,7 +41,7 @@ class LeftTurnAgent(game.Agent):
         return Directions.STOP
 
 
-class GreedyAgent(Agent):
+class GreedyAgen(Agent):
     def __init__(self, evalFn="scoreEvaluation", **kwargs):
         self.evaluationFunction = util.lookup(evalFn, globals())
         assert self.evaluationFunction != None
