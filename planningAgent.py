@@ -17,11 +17,13 @@ class PlanningAgent(game.Agent):
 
     def offline_planning(self):
         # Compute offline policy and/or value function
+        # Time limit: 10 minutes
 
         pass
 
 
     def getAction(self, state : GameState):
+        # Time limit: approx 1 second
         # Look-up offline policy or online search with MCTS/LRTDP using some pre-computed value function?
 
         print(state.getPacmanState())
