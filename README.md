@@ -8,7 +8,7 @@ or
 or
 `python pacman.py -p PlanningAgent -l knownLarge`
 
-The code of the planning agent is in the file planningAgents.py. Please, rename the agent to give it the name you want (simply by changing the name of the class).
+The code of the planning agent is in the file planningAgents.py. Please, rename the agent to give it the name you want (simply by changing the name of the class), then replace PlanningAgent above with the name of the class of your agent. You can also rename the file (add some other file other than planningAgents.py) but it should end in Agents.py for the game to load your agent.
 
 Your task is to implement the offline_planning function (where you precompute some V or Q function in some way, e.g. using RL, or using ideas based on Pattern Databases) and/or policy function; and the getAction function where you lookup your policy and/or perform online search (e.g., MCTS, LRTDP). 
 
