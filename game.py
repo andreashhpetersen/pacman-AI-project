@@ -487,6 +487,45 @@ class GameStateData:
 
         return str(map) + ("\nScore: %d\n" % self.score)
 
+    def _stateMap(self):
+        WALL = 0
+        EMPTY = 1
+        FOOD = 2
+        CAPSULE = 3
+        GHOST = 4
+        PACMAN = 5
+
+        width, height = self.layout.width, self.layout.height
+        map = Grid(width, height)
+        if type(self.food) == type((1, 2)):
+            self.food = reconstituteGrid(self.food)
+        for x in range(width):
+            for y in range(height):
+                food, walls = self.food, self.layout.walls
+                if food[x][y]:
+                    map[x][y] = FOOD
+                elif walls[x][y]:
+                    map[x][y] = WALL
+                else:
+                    map[x][y] = EMPTY
+
+        for agentState in self.agentStates:
+            if agentState == None:
+                continue
+            if agentState.configuration == None:
+                continue
+            x, y = [int(i) for i in nearestPoint(agentState.configuration.pos)]
+            agent_dir = agentState.configuration.direction
+            if agentState.isPacman:
+                map[x][y] = PACMAN
+            else:
+                map[x][y] = GHOST
+
+        for x, y in self.capsules:
+            map[x][y] = CAPSULE
+
+        return map.data
+
     def _foodWallStr(self, hasFood, hasWall):
         if hasFood:
             return '.'
@@ -780,3 +819,35 @@ class Game:
                     self.unmute()
                     return
         self.display.finish()
+
+
+    def step(self, user_action):
+        # Solicit an action
+        for agentIndex in range(len(self.agents)):
+            agent = self.agents[agentIndex]
+            if agentIndex == 0:
+                action = user_action
+            else:
+                action = agent.getAction(self.state.deepCopy())
+
+            # Execute the action
+            self.moveHistory.append((agentIndex, action))
+            self.state = self.state.generateSuccessor(agentIndex, action)
+
+
+            # Change the display
+            self.display.update(self.state.data)
+            ###idx = agentIndex - agentIndex % 2 + 1
+            ###self.display.update( self.state.makeObservation(idx).data )
+
+            # Allow for game specific conditions (winning, losing, etc.)
+            self.rules.process(self.state, self)
+
+            if self.gameOver:
+                break
+
+        # Track progress
+        self.numMoves += 1
+
+        if _BOINC_ENABLED:
+            boinc.set_fraction_done(self.getProgress())

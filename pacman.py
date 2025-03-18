@@ -584,9 +584,14 @@ def readCommand(argv):
         else:
             options.agentArgs = layout_str
 
+    # Choose a ghost agent
+    ghostType = loadAgent(options.ghost, noKeyboard)
+    args['ghosts'] = [ghostType(i+1) for i in range(options.numGhosts)]
+
     agentOpts = parseAgentArgs(options.agentArgs)
 
     agentOpts['layout'] = args['layout']
+    agentOpts['ghosts'] = args['ghosts']
 
     if options.numTraining > 0:
         args['numTraining'] = options.numTraining
@@ -599,10 +604,6 @@ def readCommand(argv):
     if 'numTrain' in agentOpts:
         options.numQuiet = int(agentOpts['numTrain'])
         options.numIgnore = int(agentOpts['numTrain'])
-
-    # Choose a ghost agent
-    ghostType = loadAgent(options.ghost, noKeyboard)
-    args['ghosts'] = [ghostType(i+1) for i in range(options.numGhosts)]
 
     # Choose a display format
     if options.quietGraphics:
