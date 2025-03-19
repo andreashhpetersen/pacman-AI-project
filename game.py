@@ -20,6 +20,7 @@
 # John DeNero (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
 # For more info, see http://inst.eecs.berkeley.edu/~cs188/sp09/pacman.html
 
+import numpy as np
 from util import *
 import time
 import os
@@ -488,6 +489,7 @@ class GameStateData:
         return str(map) + ("\nScore: %d\n" % self.score)
 
     def _stateMap(self):
+
         WALL = 0
         EMPTY = 1
         FOOD = 2
@@ -495,36 +497,25 @@ class GameStateData:
         GHOST = 4
         PACMAN = 5
 
-        width, height = self.layout.width, self.layout.height
-        map = Grid(width, height)
-        if type(self.food) == type((1, 2)):
+        # dont know if this is necessary
+        if isinstance(self.food, tuple):
             self.food = reconstituteGrid(self.food)
-        for x in range(width):
-            for y in range(height):
-                food, walls = self.food, self.layout.walls
-                if food[x][y]:
-                    map[x][y] = FOOD
-                elif walls[x][y]:
-                    map[x][y] = WALL
-                else:
-                    map[x][y] = EMPTY
+
+        width, height = self.layout.width, self.layout.height
+        grid = np.ones((width, height), dtype=np.uint8)
+        grid[self.food.data] = FOOD
+        grid[self.layout.walls.data] = WALL
+
+        if len(self.capsules) > 0:
+            grid[tuple(zip(*self.capsules))] = CAPSULE
 
         for agentState in self.agentStates:
-            if agentState == None:
-                continue
-            if agentState.configuration == None:
+            if agentState == None or agentState.configuration is None:
                 continue
             x, y = [int(i) for i in nearestPoint(agentState.configuration.pos)]
-            agent_dir = agentState.configuration.direction
-            if agentState.isPacman:
-                map[x][y] = PACMAN
-            else:
-                map[x][y] = GHOST
+            grid[x][y] = PACMAN if agentState.isPacman else GHOST
 
-        for x, y in self.capsules:
-            map[x][y] = CAPSULE
-
-        return map.data
+        return grid
 
     def _foodWallStr(self, hasFood, hasWall):
         if hasFood:
@@ -834,11 +825,8 @@ class Game:
             self.moveHistory.append((agentIndex, action))
             self.state = self.state.generateSuccessor(agentIndex, action)
 
-
             # Change the display
             self.display.update(self.state.data)
-            ###idx = agentIndex - agentIndex % 2 + 1
-            ###self.display.update( self.state.makeObservation(idx).data )
 
             # Allow for game specific conditions (winning, losing, etc.)
             self.rules.process(self.state, self)

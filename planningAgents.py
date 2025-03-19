@@ -20,6 +20,13 @@ class NullAgent:
 action_map = ['Stop', 'North', 'South', 'East', 'West']
 
 class PacmanEnv(gym.Env):
+    WALL = 0
+    EMPTY = 1
+    FOOD = 2
+    CAPSULE = 3
+    GHOST = 4
+    PACMAN = 5
+
 
     def __init__(self, layout : Layout, ghosts):
         self.layout = layout
@@ -37,13 +44,28 @@ class PacmanEnv(gym.Env):
         return {}
 
     def _get_obs(self):
-        return np.array(self.game.state.data._stateMap(), dtype=np.uint8)
+        sdata = self.game.state.data
+
+        grid = np.ones((self.layout.width, self.layout.height), dtype=np.uint8)
+        grid[sdata.food.data] = self.FOOD
+        grid[sdata.layout.walls.data] = self.WALL
+
+        if len(sdata.capsules) > 0:
+            grid[tuple(zip(*sdata.capsules))] = self.CAPSULE
+
+        for agentState in sdata.agentStates:
+            if agentState == None or agentState.configuration is None:
+                continue
+            x, y = map(int, agentState.configuration.pos)
+            grid[x][y] = self.PACMAN if agentState.isPacman else self.GHOST
+
+        return grid
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        rules = ClassicGameRules(timeout=30)  # could be parameter
+        self.rules = ClassicGameRules(timeout=30)  # could be parameter
         horizon = -1  # could also be a parameter
-        self.game = rules.newGame(
+        self.game = self.rules.newGame(
             self.layout, horizon, NullAgent(), self.ghosts, self.display,
             True, False
         )
@@ -55,15 +77,36 @@ class PacmanEnv(gym.Env):
     def step(self, action):
         action = action_map[action]
         reward = 0
+        game = self.game
 
         # penalise illegal action and choose always legal 'stop'
-        legal = self.game.state.getLegalActions()
+        legal = game.state.getLegalActions()
         if action not in legal:
             action = 'Stop'
             reward -= 1
 
         # take a step
-        self.game.step(action)
+        agent_idx = 0  # start with Pacman
+        while not game.gameOver and agent_idx < len(game.agents):
+
+            # move ghosts
+            if agent_idx != 0:
+                action = game.agents[agent_idx].getAction(game.state)
+
+            # execute the action
+            game.moveHistory.append((agent_idx, action))
+            game.state = game.state.generateSuccessor(agent_idx, action)
+
+            # change the display
+            self.display.update(game.state.data)
+
+            # check game specific conditions (winning, losing, etc.)
+            self.rules.process(game.state, game)
+
+            agent_idx += 1
+
+        # track progress
+        game.numMoves += 1
 
         # calculate reward
         new_score = self.game.state.getScore()
@@ -94,7 +137,7 @@ class PlanningAgent(game.Agent):
         if model_type == DQN:
             model_name = './dqn_pacman_smallGrid.zip'
         elif model_type == PPO:
-            model_name = './ppo_pacman_smallGrid.zip'
+            model_name = './ppo_pacman_smallGrid_600_000ts.zip'
         else:
             raise ValueError(f'model type {model_type} not supported')
 
@@ -112,7 +155,7 @@ class PlanningAgent(game.Agent):
         # Time limit: approx 1 second
         # Look-up offline policy or online search with MCTS/LRTDP using some pre-computed value function?
 
-        obs = np.array(state.data._stateMap(), dtype=np.uint8)
+        obs = state.data._stateMap()
         action, _ = self.model.predict(obs, deterministic=True)
         action = action_map[action]
         if action not in state.getLegalActions():
