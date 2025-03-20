@@ -35,7 +35,7 @@ class PacmanEnv(gym.Env):
 
         self.ndims = self.layout.width * self.layout.height
         self.observation_space = gym.spaces.Box(
-            low=0, high=6,
+            low=0, high=5,
             shape=(self.layout.width, self.layout.height), dtype=np.uint8
         )
         self.action_space = gym.spaces.Discrete(5)
@@ -82,8 +82,9 @@ class PacmanEnv(gym.Env):
         # penalise illegal action and choose always legal 'stop'
         legal = game.state.getLegalActions()
         if action not in legal:
+            # action = legal[np.random.randint(0, len(legal))]
             action = 'Stop'
-            reward -= 1
+            reward -= 2
 
         # take a step
         agent_idx = 0  # start with Pacman
@@ -137,7 +138,7 @@ class PlanningAgent(game.Agent):
         if model_type == DQN:
             model_name = './dqn_pacman_smallGrid.zip'
         elif model_type == PPO:
-            model_name = './ppo_pacman_smallGrid_600_000ts.zip'
+            model_name = './ppo_pacman_mediumClassic_3_000_000ts.zip'
         else:
             raise ValueError(f'model type {model_type} not supported')
 
@@ -146,7 +147,7 @@ class PlanningAgent(game.Agent):
         except:
             env = PacmanEnv(self.layout, self.ghosts)
             model = PPO('MlpPolicy', env, verbose=1, device='cpu')
-            model.learn(total_timesteps=600_000)
+            model.learn(total_timesteps=3_000_000)
             model.save(model_name)
 
         self.model = model
