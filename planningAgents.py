@@ -122,9 +122,9 @@ class PacmanEnv(gym.Env):
         # Apply shield 🛡️
         suggested = action
         action = self.lookahead_shield(action, self.game.state)
-        # Penalise illegal action.
-        if suggested != action:
-            reward -= 2
+        # # Penalise illegal action.
+        # if suggested != action:
+        #     reward -= 2
 
         # take a step
         agent_idx = 0  # start with Pacman
