@@ -21,6 +21,17 @@ class NullAgent:
 
 action_map = ['Stop', 'North', 'South', 'East', 'West']
 
+class AbstractState:
+    def __init__(self, state: GameState):
+        self.agentStates = state.data.copyAgentStates(state.data.agentStates)
+        self.capsules = state.getCapsules()     # The invincibility powerups. For good measure.
+
+    def write_to(self, state: GameState):
+        state.data.agentStates = state.data.copyAgentStates(self.agentStates)
+        state.data.capsules = self.capsules[:]
+
+        return state
+
 class PacmanEnv(gym.Env):
     WALL = 0
     EMPTY = 1
@@ -34,6 +45,7 @@ class PacmanEnv(gym.Env):
         self.layout = layout
         self.ghosts = ghosts
         self.display = textDisplay.NullGraphics()
+        self.gamestate = None # Dummy game-state that will be overwritten by abstract states to save deepcopies.
         self.k_lookahead = 2
 
         self.ndims = self.layout.width * self.layout.height
@@ -72,6 +84,7 @@ class PacmanEnv(gym.Env):
             self.layout, horizon, NullAgent(), self.ghosts, self.display,
             True, False
         )
+        self.gamestate = self.game.state.deepCopy()
         self.game.numMoves = 0  # should be set in game object
         self.prevScore = self.game.state.getScore()
 
@@ -123,26 +136,31 @@ class PacmanEnv(gym.Env):
     def gameOver(self):
         return self.game.gameOver
 
-    def _any_ghost_action(self, state, n_ghosts):
+    def _any_ghost_action(self, initial_state, n_ghosts):
         successors = []
         ghost_actions = []
         for ghost in range(1, n_ghosts + 1):
-            ghost_actions.append(GhostRules.getLegalActions(state, ghost))
+            ghost_actions.append(GhostRules.getLegalActions(initial_state, ghost))
         
+        initial_stateʹ = AbstractState(initial_state)
+
+        if self.gamestate == None:
+            self.gamestate = initial_state.deepCopy()
+
         assert(len(ghost_actions[0]) > 0)
         for ghost_action in itertools.product(*ghost_actions):
-            successor = state.deepCopy()
+            successor = initial_stateʹ.write_to(self.gamestate) # Overwrite the dummy game-state with the abstract state
             for (ghost, ghost_action) in enumerate(ghost_action):
                 ghost = ghost + 1 # pacman is 0.
                 successor = successor.generateSuccessor(ghost, ghost_action)
                 if successor.isLose():
                     return None
-            successors.append(successor)
+            successors.append(AbstractState(successor))
         
         return successors
     
 
-    # Shield with k-step lookahead
+    # Shield with k-step lookahead.
     def lookahead_shield(self, suggested_action: str, state: GameState):
         legal = state.getLegalActions()
         allowed = []
@@ -157,7 +175,9 @@ class PacmanEnv(gym.Env):
         for actionʹ in legal:
             #print("  Checking " + actionʹ)
             action_safe = True
-            after_action = state.generateSuccessor(pacman, actionʹ)
+
+            # Call to generateSucessor actually mutates `state`, so the new assignment is purely for clarity.
+            after_action = state.generateSuccessor(pacman, actionʹ) 
 
             if after_action.isLose():
                 #print("    Judgement: Immediate death.")
@@ -177,6 +197,8 @@ class PacmanEnv(gym.Env):
                 #print("    Judgement: Safe :-)")
 
         #print()
+
+        # Return suggested action, or alternate action if the suggested is not allowed.
         if suggested_action not in allowed:
             if 'Stop' in allowed:
                 action = 'Stop'
@@ -203,7 +225,7 @@ class PlanningAgent(game.Agent):
         self.ghosts = ghosts
         self.env = PacmanEnv(self.layout, self.ghosts)
         self.layout_name = layout_name
-        self.train_steps = 300
+        self.train_steps = 3000
         #print(layout)
         #print("Training for " + str(self.train_steps) + " steps.")
         self.offline_planning()
