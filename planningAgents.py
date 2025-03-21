@@ -337,7 +337,7 @@ class PlanningAgent(game.Agent):
         self.ghosts = ghosts
         self.env = PacmanEnv(self.layout, self.ghosts)
         self.layout_name = layout_name
-        self.train_steps = 30000
+        self.train_steps = 3_000_000
         self.enable_shield = True
         #print(layout)
         #print("Training for " + str(self.train_steps) + " steps.")
