@@ -1,13 +1,15 @@
 import gymnasium as gym
 import numpy as np
 
+import time
 from layout import Layout
-from pacman import Directions, ClassicGameRules
+from pacman import Directions, ClassicGameRules, GhostRules
 from game import Agent
 import random
 import game
 import util
 import textDisplay
+import itertools
 from pacman import GameState
 
 from stable_baselines3 import PPO, DQN
@@ -32,6 +34,7 @@ class PacmanEnv(gym.Env):
         self.layout = layout
         self.ghosts = ghosts
         self.display = textDisplay.NullGraphics()
+        self.k_lookahead = 2
 
         self.ndims = self.layout.width * self.layout.height
         self.observation_space = gym.spaces.Box(
@@ -79,11 +82,11 @@ class PacmanEnv(gym.Env):
         reward = 0
         game = self.game
 
-        # penalise illegal action and choose always legal 'stop'
-        legal = game.state.getLegalActions()
-        if action not in legal:
-            # action = legal[np.random.randint(0, len(legal))]
-            action = 'Stop'
+        # Apply shield 🛡️
+        suggested = action
+        action = self.lookahead_shield(action, self.game.state)
+        # Penalise illegal action.
+        if suggested != action:
             reward -= 2
 
         # take a step
@@ -120,14 +123,89 @@ class PacmanEnv(gym.Env):
     def gameOver(self):
         return self.game.gameOver
 
+    def _any_ghost_action(self, state, n_ghosts):
+        successors = []
+        ghost_actions = []
+        for ghost in range(1, n_ghosts + 1):
+            ghost_actions.append(GhostRules.getLegalActions(state, ghost))
+        
+        assert(len(ghost_actions[0]) > 0)
+        for ghost_action in itertools.product(*ghost_actions):
+            successor = state.deepCopy()
+            for (ghost, ghost_action) in enumerate(ghost_action):
+                ghost = ghost + 1 # pacman is 0.
+                successor = successor.generateSuccessor(ghost, ghost_action)
+                if successor.isLose():
+                    return None
+            successors.append(successor)
+        
+        return successors
+    
+
+    # Shield with k-step lookahead
+    def lookahead_shield(self, suggested_action: str, state: GameState):
+        legal = state.getLegalActions()
+        allowed = []
+        time.sleep(0.1)
+        pacman = 0
+        n_ghosts = state.getNumAgents() - 1
+
+        #print()
+        #print()
+        #print("🛡️ Sheilding " + suggested_action)
+        # Actual lookahead loop. 
+        for actionʹ in legal:
+            #print("  Checking " + actionʹ)
+            action_safe = True
+            after_action = state.generateSuccessor(pacman, actionʹ)
+
+            if after_action.isLose():
+                #print("    Judgement: Immediate death.")
+                continue
+            
+            sucessors = self._any_ghost_action(after_action, n_ghosts)
+
+            assert(sucessors == None or len(sucessors) > 0)
+
+            # TODO: Add sucessors to queue
+
+            if sucessors == None:
+                #print("    Judgement: Ghost might catch you.")
+                pass
+            else:
+                allowed.append(actionʹ)
+                #print("    Judgement: Safe :-)")
+
+        #print()
+        if suggested_action not in allowed:
+            if 'Stop' in allowed:
+                action = 'Stop'
+            elif len(allowed) == 0:
+                #print("    Hail Mary! 🙏")
+                if suggested_action in legal:
+                    action = suggested_action
+                else:
+                    action = legal[0]
+            else:
+                action = allowed[0]
+        else: 
+            action = suggested_action
+
+        #print("  Picked 👉 " + action)
+        return action
+
 
 class PlanningAgent(game.Agent):
     "An agent that turns left at every opportunity"
 
-    def __init__(self, layout : Layout, ghosts, **kwargs):
-        print(layout)
+    def __init__(self, layout : Layout, ghosts, layout_name, **kwargs):
         self.layout = layout
         self.ghosts = ghosts
+        self.env = PacmanEnv(self.layout, self.ghosts)
+        self.layout_name = layout_name
+        self.train_steps = 300
+        #print(layout)
+        #print("Training for " + str(self.train_steps) + " steps.")
         self.offline_planning()
 
 
@@ -138,16 +216,16 @@ class PlanningAgent(game.Agent):
         if model_type == DQN:
             model_name = './dqn_pacman_smallGrid.zip'
         elif model_type == PPO:
-            model_name = './ppo_pacman_mediumClassic_3_000_000ts.zip'
+            model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
         else:
             raise ValueError(f'model type {model_type} not supported')
 
         try:
             model = PPO.load(model_name, device='cpu')
         except:
-            env = PacmanEnv(self.layout, self.ghosts)
+            env = self.env
             model = PPO('MlpPolicy', env, verbose=1, device='cpu')
-            model.learn(total_timesteps=3_000_000)
+            model.learn(total_timesteps=self.train_steps)
             model.save(model_name)
 
         self.model = model
@@ -159,7 +237,6 @@ class PlanningAgent(game.Agent):
         obs = state.data._stateMap()
         action, _ = self.model.predict(obs, deterministic=True)
         action = action_map[action]
-        if action not in state.getLegalActions():
-            action = 'Stop'
+        action = self.env.lookahead_shield(action, state)
 
         return action
