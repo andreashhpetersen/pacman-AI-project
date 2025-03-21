@@ -252,6 +252,64 @@ class PacmanEnv(gym.Env):
         #print("  Picked 👉 " + action)
         return action
 
+class RandomPacman:
+    n_actions = 5
+    def predict(self, obs, deterministic=True):
+        return random.randint(0, self.n_actions - 1), '_'
+
+
+class KeyboardAgent:
+    """
+    An agent controlled by the keyboard.
+    """
+    # NOTE: Arrow keys also work.
+    WEST_KEY = 'a'
+    EAST_KEY = 'd'
+    NORTH_KEY = 'w'
+    SOUTH_KEY = 's'
+    STOP_KEY = 'q'
+
+    STOP = 0
+    NORTH = 1
+    SOUTH = 2
+    EAST = 3
+    WEST = 4
+
+    def __init__(self, index=0, **kwargs):
+
+        self.lastMove = self.STOP
+        self.index = index
+        self.keys = []
+
+    def predict(self, state, deterministic=False):
+        from graphicsUtils import keys_waiting
+        from graphicsUtils import keys_pressed
+        keys = keys_waiting() + keys_pressed()
+        if keys != []:
+            self.keys = keys
+        move = self.getMove()
+
+        if move == self.STOP:
+            move = self.lastMove
+
+        if (self.STOP_KEY in self.keys):
+            move = self.STOP
+
+        self.lastMove = move
+        return move, '_'
+
+    def getMove(self):
+        move = self.STOP
+        if (self.WEST_KEY in self.keys or 'Left' in self.keys):
+            move = self.WEST
+        if (self.EAST_KEY in self.keys or 'Right' in self.keys):
+            move = self.EAST
+        if (self.NORTH_KEY in self.keys or 'Up' in self.keys):
+            move = self.NORTH
+        if (self.SOUTH_KEY in self.keys or 'Down' in self.keys):
+            move = self.SOUTH
+        return move
+
 
 class PlanningAgent(game.Agent):
     "An agent that turns left at every opportunity"
