@@ -45,41 +45,54 @@ class PacmanEnv(gym.Env):
     GHOST = 4
     PACMAN = 5
 
+    # Const width and height to enable transfer learning in any layout
+    # this size or smaller.
+    width = 28
+    height = 28
+
 
     def __init__(self, layout : Layout, ghosts):
         self.layout = layout
+
         self.ghosts = ghosts
         self.display = textDisplay.NullGraphics()
         self.gamestate = None # Dummy game-state that will be overwritten by abstract states to save deepcopies.
         self.k_lookahead = 1
 
-        self.ndims = self.layout.width * self.layout.height
+        self.ndims = self.width * self.height
         self.observation_space = gym.spaces.Box(
             low=0, high=5,
-            shape=(self.layout.width, self.layout.height), dtype=np.uint8
+            shape=(self.width, self.height), dtype=np.uint8
         )
         self.action_space = gym.spaces.Discrete(5)
 
     def _get_info(self):
         return {}
 
-    def _get_obs(self):
-        sdata = self.game.state.data
+    def get_obs(state):
+        sdata = state.data
 
-        grid = np.ones((self.layout.width, self.layout.height), dtype=np.uint8)
-        grid[sdata.food.data] = self.FOOD
-        grid[sdata.layout.walls.data] = self.WALL
+        grid = np.ones((sdata.layout.width, sdata.layout.height), dtype=np.uint8)
+        grid[sdata.food.data] = PacmanEnv.FOOD
+        grid[sdata.layout.walls.data] = PacmanEnv.WALL
 
         if len(sdata.capsules) > 0:
-            grid[tuple(zip(*sdata.capsules))] = self.CAPSULE
+            grid[tuple(zip(*sdata.capsules))] = PacmanEnv.CAPSULE
 
         for agentState in sdata.agentStates:
             if agentState == None or agentState.configuration is None:
                 continue
             x, y = map(int, agentState.configuration.pos)
-            grid[x][y] = self.PACMAN if agentState.isPacman else self.GHOST
+            grid[x][y] = PacmanEnv.PACMAN if agentState.isPacman else PacmanEnv.GHOST
 
+        desired_shape = (PacmanEnv.width, PacmanEnv.height)
+
+        padding_widths = ((0, desired_shape[0] - grid.shape[0]),
+                          (0, desired_shape[1] - grid.shape[1]))
+
+        grid = np.pad(grid, padding_widths, constant_values=0)
         return grid
+    get_obs = staticmethod(get_obs)
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -93,7 +106,7 @@ class PacmanEnv(gym.Env):
         self.game.numMoves = 0  # should be set in game object
         self.prevScore = self.game.state.getScore()
 
-        return self._get_obs(), self._get_info()
+        return self.get_obs(self.game.state), self._get_info()
 
     def step(self, action):
         action = action_map[action]
@@ -136,7 +149,7 @@ class PacmanEnv(gym.Env):
         self.prevScore = new_score
 
         # return (state, reward, done, truncated, info)
-        return self._get_obs(), reward, self.gameOver(), False, self._get_info()
+        return self.get_obs(self.game.state), reward, self.gameOver(), False, self._get_info()
 
     def gameOver(self):
         return self.game.gameOver
@@ -272,7 +285,7 @@ class PlanningAgent(game.Agent):
         # Time limit: approx 1 second
         # Look-up offline policy or online search with MCTS/LRTDP using some pre-computed value function?
 
-        obs = state.data._stateMap()
+        obs = PacmanEnv.get_obs(state)
         action, _ = self.model.predict(obs, deterministic=True)
         action = action_map[action]
         action = self.env.lookahead_shield(action, state)
