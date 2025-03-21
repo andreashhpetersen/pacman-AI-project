@@ -145,6 +145,10 @@ class PacmanEnv(gym.Env):
         successors = []
         ghost_actions = []
         for ghost in range(1, n_ghosts + 1):
+            # Check if there's even a chance of this ghost eating us.
+            if self.k_lookahead + 1 < manhattan_distance(initial_state.getGhostPosition(ghost), pacman_position):
+                ghost_actions.append(['SKIP'])
+                continue
             ghost_actions.append(GhostRules.getLegalActions(initial_state, ghost))
         
         initial_stateʹ = AbstractState(initial_state)
@@ -154,13 +158,12 @@ class PacmanEnv(gym.Env):
 
         assert(len(ghost_actions[0]) > 0)
         for ghost_action in itertools.product(*ghost_actions):
-            
-            # Check if there's even a chance of this ghost eating us.
-            if self.k_lookahead + 1 < manhattan_distance(initial_state.getPacmanPosition(), pacman_position):
-                continue
 
             successor = initial_stateʹ.write_to(self.gamestate) # Overwrite the dummy game-state with the abstract state
             for (ghost, ghost_action) in enumerate(ghost_action):
+                if ghost_action == 'SKIP':
+                    continue
+                
                 ghost = ghost + 1 # pacman is 0.
                 successor = successor.generateSuccessor(ghost, ghost_action)
                 if successor.isLose():
