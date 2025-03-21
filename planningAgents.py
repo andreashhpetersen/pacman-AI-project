@@ -48,7 +48,7 @@ class PacmanEnv(gym.Env):
     # Const width and height to enable transfer learning in any layout
     # this size or smaller.
     width = 28
-    height = 28
+    height = 27
 
 
     def __init__(self, layout : Layout, ghosts):
