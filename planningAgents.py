@@ -198,9 +198,12 @@ class PacmanEnv(gym.Env):
         
         danger = False
         for ghost in range(1, n_ghosts + 1):
-            if self.k_lookahead + 1 > manhattan_distance(state.getPacmanPosition(), state.getGhostPosition(ghost)):
+            distance = manhattan_distance(state.getPacmanPosition(), state.getGhostPosition(ghost))
+            if self.k_lookahead + 1 >= distance:
                 danger = True
                 break
+            else:
+                pass
 
         #print()
         #print()
@@ -268,16 +271,34 @@ class PlanningAgent(game.Agent):
         # Compute offline policy and/or value function
         # Time limit: 10 minutes
         model_type = PPO
-        
-        model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
 
-        try:
-            model = PPO.load(model_name, device='cpu')
-        except:
-            env = self.env
-            model = PPO('MlpPolicy', env, verbose=1, device='cpu')
-            model.learn(total_timesteps=self.train_steps)
-            model.save(model_name)
+        if model_type == DQN:
+            model_name = './dqn_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
+            try:
+                model = DQN.load(model_name, device='cpu')
+                print("Loaded from disk. 💽")
+            except:
+                env = self.env
+                model = DQN('MlpPolicy', env, verbose=1, device='cpu')
+                model.learn(total_timesteps=self.train_steps)
+                model.save(model_name)
+        elif model_type == PPO:
+            model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
+            try:
+                model = PPO.load(model_name, device='cpu')
+                print("Loaded from disk. 💽")
+            except:
+                env = self.env
+                model = PPO('CnnPolicy', env, verbose=1, device='cpu')
+                model.learn(total_timesteps=self.train_steps)
+                model.save(model_name)
+        elif model_type == 'random':
+            model = RandomPacman()
+        elif model_type == 'keyboard':
+            model = KeyboardAgent()
+        else:
+            raise ValueError(f'model type {model_type} not supported')
+
 
         self.model = model
 
