@@ -592,6 +592,7 @@ def readCommand(argv):
 
     agentOpts['layout'] = args['layout']
     agentOpts['ghosts'] = args['ghosts']
+    agentOpts['layout_name'] = options.layout
 
     if options.numTraining > 0:
         args['numTraining'] = options.numTraining
