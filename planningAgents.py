@@ -255,12 +255,8 @@ class PlanningAgent(game.Agent):
         # Compute offline policy and/or value function
         # Time limit: 10 minutes
         model_type = PPO
-        if model_type == DQN:
-            model_name = './dqn_pacman_smallGrid.zip'
-        elif model_type == PPO:
-            model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
-        else:
-            raise ValueError(f'model type {model_type} not supported')
+        
+        model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
 
         try:
             model = PPO.load(model_name, device='cpu')
