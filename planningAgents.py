@@ -65,6 +65,8 @@ class PacmanEnv(gym.Env):
             shape=(self.width, self.height), dtype=np.uint8
         )
         self.action_space = gym.spaces.Discrete(5)
+        self.timer = None
+
 
     def _get_info(self):
         return {}
@@ -105,6 +107,10 @@ class PacmanEnv(gym.Env):
         self.gamestate = self.game.state.deepCopy()
         self.game.numMoves = 0  # should be set in game object
         self.prevScore = self.game.state.getScore()
+        self.timer = 64 # Max episode length
+        pac_pos = (0, 0)
+        while self.layout.isWall(pac_pos):
+            pac_pos = (random.randint(0, self.layout.width - 1), random.randint(0, self.layout.height - 1))
 
         return self.get_obs(self.game.state), self._get_info()
 
@@ -148,11 +154,15 @@ class PacmanEnv(gym.Env):
         reward += new_score - self.prevScore
         self.prevScore = new_score
 
+        self.timer -= 1
         # return (state, reward, done, truncated, info)
         return self.get_obs(self.game.state), reward, self.gameOver(), False, self._get_info()
 
     def gameOver(self):
-        return self.game.gameOver
+        if self.timer <= 0:
+            return True
+        else:
+            return self.game.gameOver
 
     def _any_ghost_action(self, initial_state, n_ghosts, pacman_position):
         successors = []
