@@ -177,7 +177,6 @@ class PacmanEnv(gym.Env):
     def lookahead_shield(self, suggested_action: str, state: GameState):
         legal = state.getLegalActions()
         allowed = []
-        time.sleep(0.1)
         pacman = 0
         n_ghosts = state.getNumAgents() - 1
 
