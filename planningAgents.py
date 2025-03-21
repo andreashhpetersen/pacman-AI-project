@@ -18,6 +18,11 @@ class NullAgent:
     def __init__(self):
         pass
 
+def manhattan_distance(a, b):
+    result = 0
+    for i in range(len(a)):
+        result += abs(a[i] - b[i])
+    return result
 
 action_map = ['Stop', 'North', 'South', 'East', 'West']
 
@@ -46,7 +51,7 @@ class PacmanEnv(gym.Env):
         self.ghosts = ghosts
         self.display = textDisplay.NullGraphics()
         self.gamestate = None # Dummy game-state that will be overwritten by abstract states to save deepcopies.
-        self.k_lookahead = 2
+        self.k_lookahead = 1
 
         self.ndims = self.layout.width * self.layout.height
         self.observation_space = gym.spaces.Box(
@@ -136,7 +141,7 @@ class PacmanEnv(gym.Env):
     def gameOver(self):
         return self.game.gameOver
 
-    def _any_ghost_action(self, initial_state, n_ghosts):
+    def _any_ghost_action(self, initial_state, n_ghosts, pacman_position):
         successors = []
         ghost_actions = []
         for ghost in range(1, n_ghosts + 1):
@@ -149,6 +154,11 @@ class PacmanEnv(gym.Env):
 
         assert(len(ghost_actions[0]) > 0)
         for ghost_action in itertools.product(*ghost_actions):
+            
+            # Check if there's even a chance of this ghost eating us.
+            if self.k_lookahead + 1 < manhattan_distance(initial_state.getPacmanPosition(), pacman_position):
+                continue
+
             successor = initial_stateʹ.write_to(self.gamestate) # Overwrite the dummy game-state with the abstract state
             for (ghost, ghost_action) in enumerate(ghost_action):
                 ghost = ghost + 1 # pacman is 0.
@@ -156,7 +166,7 @@ class PacmanEnv(gym.Env):
                 if successor.isLose():
                     return None
             successors.append(AbstractState(successor))
-        
+                
         return successors
     
 
@@ -167,6 +177,10 @@ class PacmanEnv(gym.Env):
         time.sleep(0.1)
         pacman = 0
         n_ghosts = state.getNumAgents() - 1
+
+        if self.k_lookahead != 1:
+            raise NotImplemented("We don't have enough CPU for that anyway.")
+        
 
         #print()
         #print()
@@ -183,11 +197,7 @@ class PacmanEnv(gym.Env):
                 #print("    Judgement: Immediate death.")
                 continue
             
-            sucessors = self._any_ghost_action(after_action, n_ghosts)
-
-            assert(sucessors == None or len(sucessors) > 0)
-
-            # TODO: Add sucessors to queue
+            sucessors = self._any_ghost_action(after_action, n_ghosts, state.getPacmanPosition())
 
             if sucessors == None:
                 #print("    Judgement: Ghost might catch you.")
