@@ -289,7 +289,7 @@ class PlanningAgent(game.Agent):
                 print("Loaded from disk. 💽")
             except:
                 env = self.env
-                model = PPO('CnnPolicy', env, verbose=1, device='cpu')
+                model = PPO('MlpPolicy', env, verbose=1, device='cpu')
                 model.learn(total_timesteps=self.train_steps)
                 model.save(model_name)
         elif model_type == 'random':
