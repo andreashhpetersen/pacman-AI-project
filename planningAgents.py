@@ -138,7 +138,7 @@ class PlanningAgent(game.Agent):
         if model_type == DQN:
             model_name = './dqn_pacman_smallGrid.zip'
         elif model_type == PPO:
-            model_name = './ppo_pacman_mediumClassic_3_000_000ts.zip'
+            model_name = './ppo_pacman_mediumClassic_6_000_000ts.zip'
         else:
             raise ValueError(f'model type {model_type} not supported')
 
@@ -147,6 +147,7 @@ class PlanningAgent(game.Agent):
         except:
             env = PacmanEnv(self.layout, self.ghosts)
             model = PPO('MlpPolicy', env, verbose=1, device='cpu')
+            # model = PPO.load(model_name, env, device='cpu')
             model.learn(total_timesteps=3_000_000)
             model.save(model_name)
 
