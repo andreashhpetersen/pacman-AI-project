@@ -107,7 +107,7 @@ class PacmanEnv(gym.Env):
         self.gamestate = self.game.state.deepCopy()
         self.game.numMoves = 0  # should be set in game object
         self.prevScore = self.game.state.getScore()
-        self.timer = 64 # Max episode length
+        self.timer = 128 # Max episode length
         pac_pos = (0, 0)
         while self.layout.isWall(pac_pos):
             pac_pos = (random.randint(0, self.layout.width - 1), random.randint(0, self.layout.height - 1))
