@@ -163,7 +163,7 @@ class PacmanEnv(gym.Env):
             for (ghost, ghost_action) in enumerate(ghost_action):
                 if ghost_action == 'SKIP':
                     continue
-                
+
                 ghost = ghost + 1 # pacman is 0.
                 successor = successor.generateSuccessor(ghost, ghost_action)
                 if successor.isLose():
@@ -184,30 +184,38 @@ class PacmanEnv(gym.Env):
         if self.k_lookahead != 1:
             raise NotImplemented("We don't have enough CPU for that anyway.")
         
+        danger = False
+        for ghost in range(1, n_ghosts + 1):
+            if self.k_lookahead + 1 > manhattan_distance(state.getPacmanPosition(), state.getGhostPosition(ghost)):
+                danger = True
+                break
 
         #print()
         #print()
-        #print("🛡️ Sheilding " + suggested_action)
-        # Actual lookahead loop. 
-        for actionʹ in legal:
-            #print("  Checking " + actionʹ)
-            action_safe = True
+        if danger:
+            #print("🛡️ Sheilding " + suggested_action)
+            # Actual lookahead loop. 
+            for actionʹ in legal:
+                #print("  Checking " + actionʹ)
+                action_safe = True
 
-            # Call to generateSucessor actually mutates `state`, so the new assignment is purely for clarity.
-            after_action = state.generateSuccessor(pacman, actionʹ) 
+                after_action = state.generateSuccessor(pacman, actionʹ) 
 
-            if after_action.isLose():
-                #print("    Judgement: Immediate death.")
-                continue
-            
-            sucessors = self._any_ghost_action(after_action, n_ghosts, state.getPacmanPosition())
+                if after_action.isLose():
+                    #print("    Judgement: Immediate death.")
+                    continue
+                
+                sucessors = self._any_ghost_action(after_action, n_ghosts, state.getPacmanPosition())
 
-            if sucessors == None:
-                #print("    Judgement: Ghost might catch you.")
-                pass
-            else:
-                allowed.append(actionʹ)
-                #print("    Judgement: Safe :-)")
+                if sucessors == None:
+                    #print("    Judgement: Ghost might catch you.")
+                    pass
+                else:
+                    allowed.append(actionʹ)
+                    #print("    Judgement: Safe :-)")
+        else:
+            #print("🧑‍⚖️ Ensuring legal: " + suggested_action)
+            allowed = legal
 
         #print()
 
