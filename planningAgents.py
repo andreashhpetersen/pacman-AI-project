@@ -184,7 +184,15 @@ class PacmanEnv(gym.Env):
             successors.append(AbstractState(successor))
                 
         return successors
-    
+
+    def make_legal(self, suggested_action: str, state: GameState):
+        legal = state.getLegalActions()
+        if suggested_action in legal:
+            return suggested_action
+        elif 'Stop' in legal:
+            return 'Stop'
+        else:
+            return legal[0]
 
     # Shield with k-step lookahead.
     def lookahead_shield(self, suggested_action: str, state: GameState):
@@ -319,7 +327,8 @@ class PlanningAgent(game.Agent):
         self.ghosts = ghosts
         self.env = PacmanEnv(self.layout, self.ghosts)
         self.layout_name = layout_name
-        self.train_steps = 3000
+        self.train_steps = 30000
+        self.enable_shield = True
         #print(layout)
         #print("Training for " + str(self.train_steps) + " steps.")
         self.offline_planning()
@@ -367,6 +376,9 @@ class PlanningAgent(game.Agent):
         obs = PacmanEnv.get_obs(state)
         action, _ = self.model.predict(obs, deterministic=True)
         action = action_map[action]
-        action = self.env.lookahead_shield(action, state)
+        if self.enable_shield:
+            action = self.env.lookahead_shield(action, state)
+        else:
+            action = self.env.make_legal(action, state)
 
         return action
