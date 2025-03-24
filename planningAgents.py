@@ -364,6 +364,9 @@ class PlanningAgent(game.Agent):
             try:
                 model = PPO.load(model_name, device='cpu')
                 print("Loaded from disk. 💽")
+                # model.set_env(env)
+                # model.learn(total_timesteps=self.train_steps, reset_num_timesteps=True)
+                # model.save(model_name)
             except:
                 env = self.env
                 model = PPO('MlpPolicy', env, verbose=1, device='cpu')
