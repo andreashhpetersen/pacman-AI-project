@@ -13,6 +13,21 @@ import itertools
 from pacman import GameState
 
 from stable_baselines3 import PPO, DQN
+from stable_baselines3.common.callbacks import BaseCallback
+
+
+class TimedTrainingCallback(BaseCallback):
+    def __init__(self, training_duration: int, verbose: int =0):
+        super().__init__(verbose)
+        self.training_duration = training_duration
+
+    def _on_training_start(self) -> None:
+        self.start_time = time.time()
+
+    def _on_step(self) -> bool:
+        if time.time() - self.start_time > self.training_duration:
+            return False
+        return True
 
 class NullAgent:
     def __init__(self):
@@ -122,9 +137,11 @@ class PacmanEnv(gym.Env):
         # Apply shield 🛡️
         suggested = action
         action = self.lookahead_shield(action, self.game.state)
-        # # Penalise illegal action.
-        # if suggested != action:
+        # Penalise illegal action.
+        # legal = game.state.getLegalActions()
+        # if action not in legal:
         #     reward -= 2
+        #     action = 'Stop'
 
         # take a step
         agent_idx = 0  # start with Pacman
@@ -337,8 +354,8 @@ class PlanningAgent(game.Agent):
         self.ghosts = ghosts
         self.env = PacmanEnv(self.layout, self.ghosts)
         self.layout_name = layout_name
-        self.train_steps = 3_000_000
-        self.enable_shield = True
+        self.train_steps = 2_220_000
+        self.enable_shield = False
         #print(layout)
         #print("Training for " + str(self.train_steps) + " steps.")
         self.offline_planning()
@@ -361,17 +378,24 @@ class PlanningAgent(game.Agent):
                 model.save(model_name)
         elif model_type == PPO:
             model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
+            # model_name = './ppo_pacman_mediumClassic_3_000_000ts_copy.zip'
+            # model_name = 'ppo_pacman_mediumClassic_10min _649847.zip'
+            model_name = './ppo_pacman_knownMedium_10min _537179.zip'
             try:
                 model = PPO.load(model_name, device='cpu')
                 print("Loaded from disk. 💽")
-                # model.set_env(env)
-                # model.learn(total_timesteps=self.train_steps, reset_num_timesteps=True)
-                # model.save(model_name)
             except:
                 env = self.env
                 model = PPO('MlpPolicy', env, verbose=1, device='cpu')
-                model.learn(total_timesteps=self.train_steps)
-                model.save(model_name)
+                model.learn(total_timesteps=self.train_steps, callback=TimedTrainingCallback(600))
+                # training_duration = 10 * 60
+                # start_time = time.time()
+                # total_timesteps = 0
+                # while time.time() - start_time < training_duration:
+                #     model.learn(total_timesteps=1000)
+                #     total_timesteps += 1000
+                model.save('./ppo_pacman_' + self.layout_name + '_10min ' + '_' + str(model.num_timesteps) + '.zip')
+                # model.save(model_name)
         elif model_type == 'random':
             model = RandomPacman()
         elif model_type == 'keyboard':
