@@ -77,7 +77,7 @@ class PacmanEnv(gym.Env):
         self.ndims = self.width * self.height
         self.observation_space = gym.spaces.Box(
             low=0, high=5,
-            shape=(self.width, self.height), dtype=np.uint8
+            shape=(self.layout.width, self.layout.height), dtype=np.uint8
         )
         self.action_space = gym.spaces.Discrete(5)
         self.timer = None
@@ -102,12 +102,12 @@ class PacmanEnv(gym.Env):
             x, y = map(int, agentState.configuration.pos)
             grid[x][y] = PacmanEnv.PACMAN if agentState.isPacman else PacmanEnv.GHOST
 
-        desired_shape = (PacmanEnv.width, PacmanEnv.height)
+        # desired_shape = (PacmanEnv.width, PacmanEnv.height)
 
-        padding_widths = ((0, desired_shape[0] - grid.shape[0]),
-                          (0, desired_shape[1] - grid.shape[1]))
+        # padding_widths = ((0, desired_shape[0] - grid.shape[0]),
+        #                   (0, desired_shape[1] - grid.shape[1]))
 
-        grid = np.pad(grid, padding_widths, constant_values=0)
+        # grid = np.pad(grid, padding_widths, constant_values=0)
         return grid
     get_obs = staticmethod(get_obs)
 
@@ -355,7 +355,7 @@ class PlanningAgent(game.Agent):
         self.env = PacmanEnv(self.layout, self.ghosts)
         self.layout_name = layout_name
         self.train_steps = 2_220_000
-        self.enable_shield = False
+        self.enable_shield = True
         #print(layout)
         #print("Training for " + str(self.train_steps) + " steps.")
         self.offline_planning()
@@ -377,10 +377,7 @@ class PlanningAgent(game.Agent):
                 model.learn(total_timesteps=self.train_steps)
                 model.save(model_name)
         elif model_type == PPO:
-            model_name = './ppo_pacman_' + self.layout_name + str(self.train_steps) + '.zip'
-            # model_name = './ppo_pacman_mediumClassic_3_000_000ts_copy.zip'
-            # model_name = 'ppo_pacman_mediumClassic_10min _649847.zip'
-            model_name = './ppo_pacman_knownMedium_10min _537179.zip'
+            model_name = f'./ppo_pacman_{self.layout_name}_10min.zip'
             try:
                 model = PPO.load(model_name, device='cpu')
                 print("Loaded from disk. 💽")
@@ -388,14 +385,8 @@ class PlanningAgent(game.Agent):
                 env = self.env
                 model = PPO('MlpPolicy', env, verbose=1, device='cpu')
                 model.learn(total_timesteps=self.train_steps, callback=TimedTrainingCallback(600))
-                # training_duration = 10 * 60
-                # start_time = time.time()
-                # total_timesteps = 0
-                # while time.time() - start_time < training_duration:
-                #     model.learn(total_timesteps=1000)
-                #     total_timesteps += 1000
-                model.save('./ppo_pacman_' + self.layout_name + '_10min ' + '_' + str(model.num_timesteps) + '.zip')
-                # model.save(model_name)
+                model.save(model_name)
+                print(model.num_timesteps)
         elif model_type == 'random':
             model = RandomPacman()
         elif model_type == 'keyboard':
